@@ -1,5 +1,5 @@
 # main.py（簡素版：S3指定時のみ出力、ローカル時は出力しない）
-import argparse, io, json
+import argparse, io, json, time
 from pathlib import Path
 import pandas as pd
 import gurobipy as gp
@@ -56,6 +56,8 @@ def solve(products: pd.DataFrame, caps: dict):
 def main():
     a = parse_args()
     use_s3 = bool((a.bucket or "").strip())
+
+    time.sleep(600)
 
     products, caps = load_s3_inputs(a.bucket, a.job_id) if use_s3 else load_local_inputs()
     obj, sol = solve(products, caps)

@@ -72,6 +72,28 @@ def upload_logs_if_needed(use_s3: bool, bucket: str | None, job_id: str):
         s3.upload_file(_GRB_LOG_PATH, bucket, grb_key)
         print(f"[info] uploaded gurobi log to s3://{bucket}/{grb_key}")
 
+
+# --- 起動時ログ（最小）＆ライセンスログ初期化 -------------------------------
+def log_startup(job_id: str, use_s3: bool):
+    py_ver = sys.version.split()[0]
+    grb_py_ver = getattr(gp, "__version__", "unknown")
+    log("[info] startup", {
+        "job_id": job_id, "use_s3": use_s3,
+        "python": py_ver, "platform": platform.platform(),
+        "gurobipy": grb_py_ver
+    })
+
+def init_gurobi_logging():
+    """最小：ライセンス解決を走らせつつ、ログファイルだけ確実に出させる"""
+    try:
+        env = gp.Env(empty=True)
+        env.setParam("LogFile", _GRB_LOG_PATH)  # ライセンス情報含む全ログを /tmp/gurobi.log へ
+        env.start()
+        env.dispose()
+        log("[info] gurobi log initialized", {"path": _GRB_LOG_PATH})
+    except Exception as e:
+        log("[warn] gurobi log init failed", {"error": str(e)})
+
 # --- 最適化 -------------------------------------------------------------------
 def solve(products: pd.DataFrame, caps: dict, enable_solver_log: bool):
     m = gp.Model("pm")
@@ -107,6 +129,10 @@ def solve(products: pd.DataFrame, caps: dict, enable_solver_log: bool):
 def main():
     a = parse_args()
     use_s3 = bool((a.bucket or "").strip())
+
+    # 起動ログ（簡素）
+    log_startup(a.job_id, use_s3)
+    init_gurobi_logging()
     log("[info] job start", {"job_id": a.job_id, "use_s3": use_s3})
 
     try:

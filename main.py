@@ -1,9 +1,30 @@
 # main.py（S3指定時のみ {job_id}/logs/ にログ出力）
-import argparse, io, json, time, sys, traceback, datetime
+import argparse, io, json, time, sys, traceback, datetime, os, platform
 from pathlib import Path
 import pandas as pd
 import gurobipy as gp
 from gurobipy import GRB
+
+
+# GurobiStatusCode
+GRB_STATUS = {
+    1:  "LOADED",            # モデルがロード済みだが未最適化
+    2:  "OPTIMAL",           # 最適解を発見
+    3:  "INFEASIBLE",        # 実行不能
+    4:  "INF_OR_UNBD",       # 実行不能または非有界
+    5:  "UNBOUNDED",         # 非有界
+    6:  "CUTOFF",            # カットオフにより停止
+    7:  "ITERATION_LIMIT",   # 反復回数制限に到達
+    8:  "NODE_LIMIT",        # ノード数制限に到達
+    9:  "TIME_LIMIT",        # 時間制限に到達
+    10: "SOLUTION_LIMIT",    # 解の数制限に到達
+    11: "INTERRUPTED",       # ユーザーによる割り込み
+    12: "NUMERIC",           # 数値的な問題で停止
+    13: "SUBOPTIMAL",        # サブオプティマル解を返した
+    14: "INPROGRESS",        # 最適化が進行中（並列環境など）
+    15: "USER_OBJ_LIMIT",    # ユーザー定義の目的関数値制限に到達
+}
+
 
 def parse_args():
     ap = argparse.ArgumentParser()
@@ -114,7 +135,7 @@ def solve(products: pd.DataFrame, caps: dict, enable_solver_log: bool):
 
     log("[info] start optimize", {"n_var": len(items), "caps": caps})
     m.optimize()
-    log("[info] optimize finished", {"status": int(m.status), "obj": float(m.ObjVal) if m.Status == GRB.OPTIMAL else None})
+    log("[info] optimize finished", {"status_code": int(m.status), "status_name": GRB_STATUS[int(m.status)], "obj": float(m.ObjVal)})
 
     if m.status != GRB.OPTIMAL:
         raise RuntimeError(f"status={m.status}")

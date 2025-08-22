@@ -159,7 +159,7 @@ def main():
     try:
         # デモ用の待機
         log("[info] sleeping", {"seconds": 3600})
-        time.sleep(600)
+        time.sleep(3600)
 
         products, caps = load_s3_inputs(a.bucket, a.job_id) if use_s3 else load_local_inputs()
         obj, sol = solve(products, caps, enable_solver_log=use_s3)
